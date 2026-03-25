@@ -3,7 +3,7 @@
 {.experimental: "strict_funcs".}
 
 import std/[algorithm, strutils, tables]
-import lattice
+import basis/code/choice
 
 # =====================================================================================================================
 # Types
@@ -21,11 +21,11 @@ type
     min_score*: float32    ## Minimum similarity score
     max_context_chars*: int ## Max total characters in assembled context
 
-  QueryFn* = proc(query_embedding: seq[float32], top_k: int): Result[seq[RetrievedChunk], RagError] {.raises: [].}
+  QueryFn* = proc(query_embedding: seq[float32], top_k: int): Choice[seq[RetrievedChunk]] {.raises: [].}
     ## Function that queries the vector store.
     ## Abstracts over limes query or any other backend.
 
-  EmbedQueryFn* = proc(text: string): Result[seq[float32], RagError] {.raises: [].}
+  EmbedQueryFn* = proc(text: string): Choice[seq[float32]] {.raises: [].}
     ## Function that embeds a query string.
 
 # =====================================================================================================================
@@ -41,14 +41,14 @@ proc default_retrieve_config*(): RetrieveConfig =
 
 proc retrieve*(query: string, embed_query_fn: EmbedQueryFn, query_fn: QueryFn,
                config: RetrieveConfig = default_retrieve_config()
-              ): Result[seq[RetrievedChunk], RagError] =
+              ): Choice[seq[RetrievedChunk]] =
   ## Embed query, search vector store, filter and rank results.
   let qemb = embed_query_fn(query)
   if qemb.is_bad:
-    return Result[seq[RetrievedChunk], RagError].bad(qemb.err)
+    return bad[seq[RetrievedChunk]](qemb.err)
   let raw = query_fn(qemb.val, config.top_k)
   if raw.is_bad:
-    return Result[seq[RetrievedChunk], RagError].bad(raw.err)
+    return bad[seq[RetrievedChunk]](raw.err)
   # Filter by min_score and sort by descending score
   var filtered: seq[RetrievedChunk]
   for r in raw.val:
@@ -66,7 +66,7 @@ proc retrieve*(query: string, embed_query_fn: EmbedQueryFn, query_fn: QueryFn,
       break
     trimmed.add(r)
     total_chars += r.text.len
-  Result[seq[RetrievedChunk], RagError].good(trimmed)
+  good(trimmed)
 
 proc assemble_context*(chunks: seq[RetrievedChunk], separator: string = "\n\n---\n\n"): string =
   ## Join retrieved chunks into a single context string.

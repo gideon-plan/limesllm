@@ -4,7 +4,7 @@
 
 {.experimental: "strict_funcs".}
 
-import lattice
+import basis/code/choice
 
 # =====================================================================================================================
 # Types
@@ -17,7 +17,7 @@ type
     top_k*: int32
     top_p*: float32
 
-  GenerateFn* = proc(prompt: string, config: GenerateConfig): Result[string, RagError] {.raises: [].}
+  GenerateFn* = proc(prompt: string, config: GenerateConfig): Choice[string] {.raises: [].}
     ## Function that generates text from a prompt.
     ## Abstracts over llama tokenize + decode + sample loop.
 
@@ -34,14 +34,14 @@ proc default_generate_config*(): GenerateConfig =
 
 proc generate*(prompt: string, gen_fn: GenerateFn,
                config: GenerateConfig = default_generate_config()
-              ): Result[string, RagError] =
+              ): Choice[string] =
   ## Generate a response from the given prompt.
   gen_fn(prompt, config)
 
 proc generate_with_context*(context: string, query: string,
                             gen_fn: GenerateFn,
                             config: GenerateConfig = default_generate_config()
-                           ): Result[string, RagError] =
+                           ): Choice[string] =
   ## Convenience: assemble prompt inline and generate.
   let prompt = "Context:\n" & context & "\n\nQuestion: " & query
   gen_fn(prompt, config)

@@ -5,7 +5,7 @@
 {.experimental: "strict_funcs".}
 
 import std/[strutils, tables, math]
-import lattice
+import basis/code/choice
 
 # =====================================================================================================================
 # Types
@@ -73,16 +73,16 @@ proc chunk_documents*(docs: seq[(string, string)],
 # =====================================================================================================================
 
 type
-  EmbedFn* = proc(text: string): Result[seq[float32], RagError] {.raises: [].}
+  EmbedFn* = proc(text: string): Choice[seq[float32]] {.raises: [].}
     ## Function that generates an embedding vector from text.
     ## Abstracts over llama get_embeddings or any other embedding backend.
 
-proc embed_chunks*(chunks: seq[Chunk], embed_fn: EmbedFn): Result[seq[EmbedResult], RagError] =
+proc embed_chunks*(chunks: seq[Chunk], embed_fn: EmbedFn): Choice[seq[EmbedResult]] =
   ## Generate embeddings for a sequence of chunks.
   var results: seq[EmbedResult]
   for chunk in chunks:
     let emb = embed_fn(chunk.text)
     if emb.is_bad:
-      return Result[seq[EmbedResult], RagError].bad(emb.err)
+      return bad[seq[EmbedResult]](emb.err)
     results.add(EmbedResult(chunk: chunk, embedding: emb.val))
-  Result[seq[EmbedResult], RagError].good(results)
+  good(results)
